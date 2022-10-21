@@ -1,0 +1,14 @@
+{
+    "json": {
+        "packagename": "jsonprotocol",
+        "type": "str"
+    },
+    "msgpack": {
+        "packagename": "msgpackprotocol",
+        "type": "bin"
+    },
+    "pickle": {
+        "packagename": "pickleprotocol",
+        "type": "bin"
+    }
+}
