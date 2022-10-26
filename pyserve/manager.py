@@ -14,17 +14,17 @@ from .socketprotocol import Packet, SocketProtocol, StrictPacket
 
 class RequestManagerBase:
 
-    _requestHeaderString: str
+    _request_header_string: str
     _protocol: SocketProtocol
     _timeout: float
     _address: Address
     requests: dict[str, RequestFunction]
 
-    def __init__(self, *, requestHeaderString: str="RequestType"):
-        self._requestHeaderString = requestHeaderString
+    def __init__(self, *, request_header_string: str="RequestType"):
+        self._request_header_string = request_header_string
         self.requests = {}
 
-    def subscribe(self, requestName: str, function: RequestFunction):
+    def subscribe(self, request_name: str, function: RequestFunction):
         """Add the given requestName and function to the list of valid requests
         and will call function whenever a request of type requestName is given.
         Note that the function given *must* return a dict that can be serialised
@@ -35,12 +35,12 @@ class RequestManagerBase:
                 when requestName is already occupied by a request definition
                 use unsubscribe to remove a request definition
         """
-        if requestName in self.requests:
-            raise KeyError(f"Cannot subscribe function {function} to name {requestName} because "
+        if request_name in self.requests:
+            raise KeyError(f"Cannot subscribe function {function} to name {request_name} because "
                            f"the name is already used")
-        self.requests[requestName] = function
+        self.requests[request_name] = function
 
-    def unsubscribe(self, requestName: str, function: RequestFunction):
+    def unsubscribe(self, request_name: str, function: RequestFunction):
         """Removes the requestName from the list of valid requests. If a function
         is given, a stricter version is used where the function assigned to requestName
         must be equal to the given function.
@@ -53,28 +53,28 @@ class RequestManagerBase:
                 when function does not match the function attatched to the requestName being
                 removed
         """
-        if requestName not in self.requests:
-            raise KeyError(f"Cannot unsubscribe name {requestName} as it is not subscribed")
-        if function is None or function == self.requests[requestName]:
-            del self.requests[requestName]
+        if request_name not in self.requests:
+            raise KeyError(f"Cannot unsubscribe name {request_name} as it is not subscribed")
+        if function is None or function == self.requests[request_name]:
+            del self.requests[request_name]
         else:
             raise ValueError(f"Optional function {function} check does not match the function "
-                             f"{self.requests[requestName]} for request name {requestName}")
+                             f"{self.requests[request_name]} for request name {request_name}")
 
-    def post(self, requestName: str, packet: StrictPacket) -> Packet:
+    def post(self, request_name: str, packet: StrictPacket) -> Packet:
         """Posts request requestName with the data obtained from a packet sent
         as Kwargs to the subscribed function. 
         """
-        if requestName not in self.requests:
+        if request_name not in self.requests:
             return None
-        return self.requests[requestName](packet)
+        return self.requests[request_name](packet)
 
 
 class RequestManagerServer(RequestManagerBase, Server):
     
     def __init__(self, address: Address, *,
                 protocol: SocketProtocol,
-                requestHeaderString: str="RequestType",
+                request_header_string: str="RequestType",
                 timeout: float=10.
     ):
         Server.__init__(self,
@@ -83,7 +83,7 @@ class RequestManagerServer(RequestManagerBase, Server):
                 tickcallback=cast(TickCallBack, self.__class__._handle_request),  
                 timeout=timeout
             )
-        RequestManagerBase.__init__(self, requestHeaderString=requestHeaderString)
+        RequestManagerBase.__init__(self, request_header_string=request_header_string)
 
     def reply(self, client: Address, response: StrictPacket):
         try:
@@ -95,14 +95,14 @@ class RequestManagerServer(RequestManagerBase, Server):
     def _handle_request(server: RequestManagerServer, addr: Address, packet: Packet):
         if packet is None:
             return
-        header = cast(str, packet[server.requestHeaderString])
+        header = cast(str, packet[server.request_header_string])
         packet["addr"] = cast(list, addr)
         resp = server.post(header, packet)
         server.reply(addr, cast(StrictPacket, resp))
 
     @property
-    def requestHeaderString(self) -> str:
-        return self._requestHeaderString
+    def request_header_string(self) -> str:
+        return self._request_header_string
    
 
 RequestFunction = Callable[[Packet], StrictPacket]

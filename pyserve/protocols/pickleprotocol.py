@@ -4,8 +4,8 @@ import pickle
 from .plugin import SocketProtocol, malformed_packet_wrap
 
 DefaultArgs = {
-    "byteEncodingString":">LL",
-    "infoBytes":8
+    "byte_encoding_string":">LL",
+    "info_bytes":8
 }
 
 class Plugin(SocketProtocol):

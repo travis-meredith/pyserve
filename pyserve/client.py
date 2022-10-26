@@ -1,7 +1,7 @@
 
 from __future__ import annotations
 
-__all__: list[str] = ["ClientNotConnectedError", "Client"]
+__all__ = ["ClientNotConnectedError", "Client"]
 
 import socket
 from contextlib import suppress
@@ -10,7 +10,6 @@ from typing import cast
 
 from .address import Address
 from .socketprotocol import SocketProtocol, StrictPacket
-
 
 class ClientState(Enum):
     IDLE = 0
@@ -46,20 +45,20 @@ class Client:
     -- timeout: amount of time before timeout triggered on socket (10.)
     """
 
-    _address: Address
-    _protocol: SocketProtocol
-    _socket: socket.socket
-    _state: ClientState
+    __address: Address
+    __protocol: SocketProtocol
+    __socket: socket.socket
+    __state: ClientState
     timeout: float
 
     def __init__(self, address: Address, *,
                 protocol: SocketProtocol,
                 timeout: float=10.
     ):
-        self._address = address
-        self._socket = socket.socket()
-        self._protocol = protocol
-        self._state = ClientState.IDLE
+        self.__address = address
+        self.__socket = socket.socket()
+        self.__protocol = protocol
+        self.__state = ClientState.IDLE
         self.timeout = timeout
         
     def __enter__(self):
@@ -71,7 +70,7 @@ class Client:
     def close(self):
         """Set server state to closed and close the socket
         """
-        self._state = ClientState.CLOSED
+        self.__state = ClientState.CLOSED
         self.sock.close()
 
     def connect(self) -> Client:
@@ -79,7 +78,7 @@ class Client:
         set state
         """
         self.sock.connect(self.address.astuple())
-        self._state = ClientState.CONNECTED
+        self.__state = ClientState.CONNECTED
         return self
 
     def request(self, packet: StrictPacket) -> StrictPacket:
@@ -120,19 +119,19 @@ class Client:
 
     @property
     def address(self) -> Address:
-        return self._address
+        return self.__address
 
     @property
     def protocol(self) -> SocketProtocol:
-        return self._protocol
+        return self.__protocol
 
     @property
     def sock(self) -> socket.socket:
-        return self._socket
+        return self.__socket
 
     @property
     def state(self) -> ClientState:
-        return self._state
+        return self.__state
 
     @property
     def closed(self) -> bool:

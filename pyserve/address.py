@@ -21,3 +21,7 @@ class Address:
     def astuple(self) -> RawAddress:
         return cast(RawAddress, astuple(self))
 
+    @staticmethod
+    def from_raw_address(raw_address: RawAddress) -> Address:
+        return Address(raw_address[0], raw_address[1])
+

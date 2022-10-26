@@ -33,8 +33,8 @@ def chop(seq: bytes, dist: int) -> list[bytes]:
 def make_binary_protocol(*, 
         encode_function: Callable, 
         decode_function: Callable, 
-        byteEncodingString: str, # struct pattern for the header
-        infoBytes: int # amount of bytes to read off (must match the struct pattern)
+        byte_encoding_string: str, # struct pattern for the header
+        info_bytes: int # amount of bytes to read off (must match the struct pattern)
         ) -> _SocketProtocol:
 
     """
@@ -47,26 +47,26 @@ def make_binary_protocol(*,
         if len(serialised) > MAX_PACKET_SIZE:
             chopped = chop(serialised, MAX_PACKET_SIZE)
             for i in range(len(chopped) - 1):
-                bytes_ = struct.pack(byteEncodingString, len(chopped[i]), len(chopped) - i) + chopped[i]
+                bytes_ = struct.pack(byte_encoding_string, len(chopped[i]), len(chopped) - i) + chopped[i]
                 sock.send(bytes_)
             chunk = chopped[-1]
-            bytes_ = struct.pack(byteEncodingString, len(chunk), 1) + chunk
+            bytes_ = struct.pack(byte_encoding_string, len(chunk), 1) + chunk
             sock.send(bytes_)
         else:
-            bytes_ = struct.pack(byteEncodingString, len(serialised), 0) + serialised
+            bytes_ = struct.pack(byte_encoding_string, len(serialised), 0) + serialised
             sock.send(bytes_)
 
     def recv_message(sock: socket) -> Packet:
-        lengthRaw = sock.recv(infoBytes)
+        lengthRaw = sock.recv(info_bytes)
         try:
-            length, style = struct.unpack(byteEncodingString, lengthRaw)
+            length, style = struct.unpack(byte_encoding_string, lengthRaw)
             if style == 0:
                 pass
             elif style >= 1:
                 raws = [sock.recv(length)]
                 for _ in range(style - 1):
-                    lengthRaw = sock.recv(infoBytes)
-                    length, style = struct.unpack(byteEncodingString, lengthRaw)
+                    lengthRaw = sock.recv(info_bytes)
+                    length, style = struct.unpack(byte_encoding_string, lengthRaw)
                     raws.append(sock.recv(length))
                 return decode_function(reduce(lambda x, y: x + y, raws))
                 #raws = [sock.recv(length)]
@@ -89,9 +89,9 @@ def make_binary_protocol(*,
 def make_string_protocol(*,
         encode_function: Callable,
         decode_function: Callable,
-        headerLength: int,
+        header_length: int,
         encoding: str,
-        zeroString: str
+        zero_string: str
         ) -> _SocketProtocol:
 
     """
@@ -101,12 +101,12 @@ def make_string_protocol(*,
 
     def send_message(sock: socket, packet: StrictPacket):
         serialised = encode_function(packet)
-        msg = bytes(str(len(serialised)).rjust(headerLength, zeroString), encoding)
+        msg = bytes(str(len(serialised)).rjust(header_length, zero_string), encoding)
         sock.send(msg)
         sock.sendall(bytes(serialised, encoding=encoding))
 
     def recv_message(sock: socket) -> Packet:
-        length = str(sock.recv(headerLength), encoding)
+        length = str(sock.recv(header_length), encoding)
         if length == "":
             return None
         ilength = int(length)
@@ -120,33 +120,33 @@ def make_string_protocol(*,
     return _SocketProtocol(send_message, recv_message)
 
 @lru_cache(maxsize=256)
-def _load_protocol(protocolName: str, sortedArgs: tuple) -> SocketProtocol:
+def _load_protocol(protocol_name: str, sorted_args: tuple) -> SocketProtocol:
 
-    kwargs = {key: value for key, value in sortedArgs}
+    kwargs = {key: value for key, value in sorted_args}
 
-    if protocolName in LOADED_PROTOCOLS:
-        return cast(SocketProtocol, LOADED_PROTOCOLS[protocolName](**kwargs))
-    raise KeyError(f"Protocol {protocolName} is not defined")
+    if protocol_name in LOADED_PROTOCOLS:
+        return cast(SocketProtocol, LOADED_PROTOCOLS[protocol_name](**kwargs))
+    raise KeyError(f"Protocol {protocol_name} is not defined")
 
-def load_protocol(protocolName: Union[str, tuple]=None, **kwargs) -> SocketProtocol:
+def load_protocol(protocol_name: str | Sequence[str] | None=None, **kwargs) -> SocketProtocol:
 
-    sortedArgs = tuple(sorted(kwargs.items()))
+    sorted_args = tuple(sorted(kwargs.items()))
 
-    if protocolName is None:
-        protocolName = DEFAULT_PROTOCOL
+    if protocol_name is None:
+        protocol_name = DEFAULT_PROTOCOL
 
     # single string given
-    if isinstance(protocolName, str):
-        return _load_protocol(protocolName.lower(), sortedArgs)
+    if isinstance(protocol_name, str):
+        return _load_protocol(protocol_name.lower(), sorted_args)
 
     # list of protocols
-    elif isinstance(protocolName, list):
-        for protocol in protocolName:
+    elif isinstance(protocol_name, list):
+        for protocol in protocol_name:
             protocol = cast(str, protocol)
             with suppress(KeyError):
-                return _load_protocol(protocol.lower(), sortedArgs)
+                return _load_protocol(protocol.lower(), sorted_args)
 
-    raise KeyError(f"Protocol definition {protocolName} could not be resolved to a valid protocol")
+    raise KeyError(f"Protocol definition {protocol_name} could not be resolved to a valid protocol")
 
 def load_any_protocol() -> SocketProtocol:
     for protocolname in sorted(LOADED_PROTOCOLS.keys()):
@@ -159,16 +159,16 @@ def load_any_protocol() -> SocketProtocol:
 def _load_plugin(plugin: dict):
 
     try:
-        pluginRoute = plugin["packagename"]
-        pluginType = plugin["type"]
+        plugin_route = plugin["packagename"]
+        plugin_type = plugin["type"]
     except KeyError:
         warn(f"Plugin {plugin} is ill-defined (missing 'packagename' or 'type')")
         return
 
     try:
-        module = cast(PluginModule, importlib.import_module(f".{pluginRoute}", "pyserve.protocols"))
+        module = cast(PluginModule, importlib.import_module(f".{plugin_route}", "pyserve.protocols"))
     except ImportError:
-        warn(f"Plugin {plugin} (at .{pluginRoute} in package pyserve.protocols) could not be found")
+        warn(f"Plugin {plugin} (at .{plugin_route} in package pyserve.protocols) could not be found")
         return 
     
     try:
@@ -186,14 +186,14 @@ def _load_plugin(plugin: dict):
     encode_function = protocol.send_message
     decode_function = protocol.recv_message
 
-    if pluginType == "str":
+    if plugin_type == "str":
         LOADED_PROTOCOLS[pluginname] = partial(
             make_string_protocol,
                 encode_function=encode_function,
                 decode_function=decode_function,
                 **kwargs
         )
-    elif pluginType == "bin":
+    elif plugin_type == "bin":
         LOADED_PROTOCOLS[pluginname] = partial(
             make_binary_protocol,
                 encode_function=encode_function,

@@ -11,7 +11,7 @@ from typing import cast
 
 from pyserve import (Address, Client, ClientNotConnectedError, Packet,
                      PacketMalformedError, RequestManagerServer, Server,
-                     ServerError, StrictPacket, load_protocol, socketprotocol)
+                     ServerError, StrictPacket, load_protocol)
 
 HOST_IP = "127.0.0.1"
 TARGET_IP = "127.0.0.1"

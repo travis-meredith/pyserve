@@ -9,8 +9,7 @@ import time
 from contextlib import suppress
 from enum import Enum
 from queue import Queue
-from types import MethodType
-from typing import Any, Callable, Generator
+from typing import Callable, Generator
 
 from .address import Address
 from .call import call
@@ -60,17 +59,17 @@ class Server:
 
     """
 
-    _address: Address
+    __address: Address
     _protocol: SocketProtocol
     _socket: socket.socket
     _state: ServerState
     _tickcallback: tuple[TickCallBack]
-    _clientDictLock: threading.Lock
+    _client_dict_lock: threading.Lock
     _clients: dict[Address, Connection]
     _queue: Queue[tuple[Address, Packet]]
     _threads: list[threading.Thread]
     _unjoined: list[threading.Thread]
-    _unjoinedLock: threading.Lock
+    _unjoined_lock: threading.Lock
     delay: float
 
     def __init__(self, address: Address, *, 
@@ -79,17 +78,17 @@ class Server:
                 timeout: float=10.,
                 delay: float=0.000
     ):
-        self._address = address
+        self.__address = address
         self._protocol = protocol
         self._socket = socket.socket()
         self._state = ServerState.IDLE
         self._tickcallback = (tickcallback,)
-        self._clientDictLock = threading.Lock()
+        self._client_dict_lock = threading.Lock()
         self._clients = {}
         self._queue = Queue()
         self._threads = []
         self._unjoined = []
-        self._unjoinedLock = threading.Lock()
+        self._unjoined_lock = threading.Lock()
         self._timeout = timeout
         self.delay = delay
         self._connect()
@@ -139,7 +138,7 @@ class Server:
             KeyError:
                 when there is no client at Address address
         """
-        with self._clientDictLock:
+        with self._client_dict_lock:
             self._clients[address].send(packet)
 
     def close(self):
@@ -156,7 +155,7 @@ class Server:
 
     @property
     def address(self) -> Address:
-        return self._address
+        return self.__address
 
     @property
     def timeout(self) -> float:
@@ -217,7 +216,7 @@ class Server:
             # on an empty tick, join closed connection threads if there
             # exists any to join
             if len(self._unjoined) > 0:
-                with self._unjoinedLock:
+                with self._unjoined_lock:
                     for thread in self._unjoined:
                         thread.join()
                     self._unjoined = []
@@ -247,7 +246,7 @@ class Server:
         while not self.closed:
             with suppress(socket.timeout, OSError):
                 connection = Connection(self.protocol, self.sock.accept(), self._queue)
-                with self._clientDictLock:
+                with self._client_dict_lock:
                     self._clients[connection.addr] = connection
                 self._nonblocking_connect(connection)
 
@@ -256,6 +255,5 @@ class Server:
 
     def _start_thread(self, function: Callable):
         self._threads.append(call(function))
-
 
 TickCallBack = Callable[[Server, Address, StrictPacket], None]

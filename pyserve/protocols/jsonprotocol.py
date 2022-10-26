@@ -4,9 +4,9 @@ import json
 from .plugin import SocketProtocol, malformed_packet_wrap
 
 DefaultArgs = {
-    "headerLength":12,
+    "header_length":12,
     "encoding":"utf-8",
-    "zeroString":"0"
+    "zero_string":"0"
 }
 
 class Plugin(SocketProtocol):

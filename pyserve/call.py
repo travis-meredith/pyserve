@@ -1,9 +1,10 @@
 
+from __future__ import annotations
+
 __all__ = ["call"]
 
 from threading import Thread
 from typing import Any, Callable, Mapping
-
 
 def call(func: Callable[..., Any], **kwargs) -> Thread:
     "calls <func> in a subthread and returns that thread"
